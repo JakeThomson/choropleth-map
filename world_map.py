@@ -1,8 +1,10 @@
+import math
+
 from plotly import graph_objs as go
 import pandas as pd
 import requests
 import bs4 as bs
-import pprint as pp
+import sys
 
 
 def update_csv():
@@ -25,11 +27,26 @@ def update_csv():
         if country == " ":
             continue
         elif country == " USA ":
+            if cases - temp_df.loc["USA", "CASES"] == 0:
+                temp_df.loc["USA", "NEW CASES"] = " "
+            else:
+                temp_df.loc["USA", "NEW CASES"] = " (+" + str(cases - temp_df.loc["USA", "CASES"]) + ")"
             temp_df.loc["USA", "CASES"] = cases
+            temp_df.loc["USA", "LOGS"] = math.log(cases)
         elif country == " Bhutan ":
+            if cases - temp_df.loc["BTN", "CASES"] == 0:
+                temp_df.loc["BTN", "NEW CASES"] = " "
+            else:
+                temp_df.loc["BTN", "NEW CASES"] = " (+" + str(cases - temp_df.loc["BTN", "CASES"]) + ")"
             temp_df.loc["BTN", "CASES"] = cases
+            temp_df.loc["BTN", "LOGS"] = math.log(cases)
         elif country == " Costa Rica ":
+            if cases - temp_df.loc["CRI", "CASES"] == 0:
+                temp_df.loc["CRI", "NEW CASES"] = " "
+            else:
+                temp_df.loc["CRI", "NEW CASES"] = " (+" + str(cases - temp_df.loc["CRI", "CASES"]) + ")"
             temp_df.loc["CRI", "CASES"] = cases
+            temp_df.loc["CRI", "LOGS"] = math.log(cases)
         else:
             print(f"Grabbing {str(country)} with {cases} cases ISO code")
             while True:
@@ -38,11 +55,19 @@ def update_csv():
                     google_soup = bs.BeautifulSoup(google_resp.text, 'html.parser')
 
                     code = google_soup.find("div", {"class": "Z0LcW"}).next
-                    print(code)
+
+                    if cases - temp_df.loc[code, "CASES"] == 0:
+                        temp_df.loc[code, "NEW CASES"] = " "
+                    else:
+                        temp_df.loc[code, "NEW CASES"] = " (+" + str(cases - temp_df.loc[code, "CASES"]) + ")"
+
+                    if temp_df.loc[code, "NEW CASES"] == 0:
+                        temp_df.loc[code, "NEW CASES"] = " "
 
                     temp_df.loc[code, "CASES"] = cases
+                    temp_df.loc[code, "LOGS"] = math.log(cases)
                     break
-                except ValueError as e:
+                except (ValueError, KeyError) as e:
                     print(f"Error: {e}")
                     break
                 except requests.exceptions.ConnectionError:
@@ -52,12 +77,15 @@ def update_csv():
     temp_df.to_csv("world_codes.csv")
 
 
+if len(sys.argv) > 1 and sys.argv[1] == "update":
+    update_csv()
+
 df = pd.read_csv('world_codes.csv')
 for col in df.columns:
     df[col] = df[col].astype(str)
 
 df["text"] = df["COUNTRY"] + "<br>" + \
-             "Cases: " + df["CASES"]
+             "Total Cases: " + df["CASES"] + df["NEW CASES"]
 
 fig = go.Figure(data=go.Choropleth(
     locations=df['CODE'],
