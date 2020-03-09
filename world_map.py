@@ -1,5 +1,5 @@
 import math
-
+import pycountry
 from plotly import graph_objs as go
 import pandas as pd
 import requests
@@ -15,67 +15,55 @@ def update_csv():
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'}
 
     temp_df = pd.read_csv('world_codes.csv', index_col="CODE", engine="python")
+    codes = pd.read_csv("country_codes.csv", index_col="COUNTRY")
 
     for i, row in enumerate(table_rows[1:len(table_rows) - 1]):
         if i == 0:
             continue
         table_cells = table_rows[i].findAll("td")
-        country = table_cells[0].next
+        country = table_cells[0].next.strip()
+        country = country.replace("St.", "Saint")
+        country = country.replace("N.", "North")
+        country = country.replace("S.", "South")
+
         cases = table_cells[1].next
         cases = int(cases.replace(",", ""))
 
-        if country == " ":
+        if country == "":
             continue
-        elif country == " USA ":
-            if cases - temp_df.loc["USA", "CASES"] == 0:
-                temp_df.loc["USA", "NEW CASES"] = " "
-            else:
-                temp_df.loc["USA", "NEW CASES"] = " (+" + str(cases - temp_df.loc["USA", "CASES"]) + ")"
-            temp_df.loc["USA", "CASES"] = cases
-            temp_df.loc["USA", "LOGS"] = math.log(cases)
-        elif country == " Bhutan ":
-            if cases - temp_df.loc["BTN", "CASES"] == 0:
-                temp_df.loc["BTN", "NEW CASES"] = " "
-            else:
-                temp_df.loc["BTN", "NEW CASES"] = " (+" + str(cases - temp_df.loc["BTN", "CASES"]) + ")"
-            temp_df.loc["BTN", "CASES"] = cases
-            temp_df.loc["BTN", "LOGS"] = math.log(cases)
-        elif country == " Costa Rica ":
-            if cases - temp_df.loc["CRI", "CASES"] == 0:
-                temp_df.loc["CRI", "NEW CASES"] = " "
-            else:
-                temp_df.loc["CRI", "NEW CASES"] = " (+" + str(cases - temp_df.loc["CRI", "CASES"]) + ")"
-            temp_df.loc["CRI", "CASES"] = cases
-            temp_df.loc["CRI", "LOGS"] = math.log(cases)
         else:
-            print(f"Grabbing {str(country)} with {cases} cases ISO code")
-            while True:
-                try:
-                    google_resp = requests.get(f"https://www.google.com/search?q={country}+ISO+code", headers=headers)
-                    google_soup = bs.BeautifulSoup(google_resp.text, 'html.parser')
+            if country in codes.index:
+                code = codes.loc[country, "CODE"]
+            else:
+                print(f"{str(country)} ({cases} cases) is not in country_codes.csv, grabbing ISO code from google")
+                while True:
+                    try:
+                        code = pycountry.countries.search_fuzzy(country)
+                        break
+                    except ValueError:
+                        break
+                    except requests.exceptions.ConnectionError:
+                        print(f"Error: {e}")
+                        print("Retrying...")
 
-                    code = google_soup.find("div", {"class": "Z0LcW"}).next
+        try:
+            if cases - temp_df.loc[code, "CASES"] == 0:
+                temp_df.loc[code, "NEW CASES"] = " "
+            else:
+                temp_df.loc[code, "NEW CASES"] = " (+" + str(cases - temp_df.loc[code, "CASES"]) + ")"
 
-                    if cases - temp_df.loc[code, "CASES"] == 0:
-                        temp_df.loc[code, "NEW CASES"] = " "
-                    else:
-                        temp_df.loc[code, "NEW CASES"] = " (+" + str(cases - temp_df.loc[code, "CASES"]) + ")"
+            if temp_df.loc[code, "NEW CASES"] == 0:
+                temp_df.loc[code, "NEW CASES"] = " "
 
-                    if temp_df.loc[code, "NEW CASES"] == 0:
-                        temp_df.loc[code, "NEW CASES"] = " "
-
-                    temp_df.loc[code, "CASES"] = cases
-                    temp_df.loc[code, "LOGS"] = math.log(cases)
-                    break
-                except (ValueError, KeyError) as e:
-                    print(f"Error: {e}")
-                    break
-                except requests.exceptions.ConnectionError:
-                    print(f"Error: {e}")
-                    print("Retrying...")
+            temp_df.loc[code, "CASES"] = cases
+            temp_df.loc[code, "LOGS"] = math.log(cases)
+        except KeyError as e:
+            print(f"Error: {e}")
 
     temp_df.to_csv("world_codes.csv")
 
+
+update_csv()
 
 if len(sys.argv) > 1 and sys.argv[1] == "update":
     update_csv()
