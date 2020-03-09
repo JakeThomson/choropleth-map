@@ -29,6 +29,12 @@ def update_csv():
         cases = table_cells[1].next
         cases = int(cases.replace(",", ""))
 
+        deaths = table_cells[3].next
+        if not deaths == " ":
+            deaths = int(deaths.replace(",", ""))
+        else:
+            deaths = 0
+
         if country == "":
             continue
         else:
@@ -52,18 +58,19 @@ def update_csv():
             else:
                 temp_df.loc[code, "NEW CASES"] = " (+" + str(cases - temp_df.loc[code, "CASES"]) + ")"
 
-            if temp_df.loc[code, "NEW CASES"] == 0:
-                temp_df.loc[code, "NEW CASES"] = " "
+            if deaths - temp_df.loc[code, "DEATHS"] == 0:
+                temp_df.loc[code, "NEW DEATHS"] = " "
+            else:
+                temp_df.loc[code, "NEW DEATHS"] = " (+" + str(deaths - temp_df.loc[code, "DEATHS"]) + ")"
 
             temp_df.loc[code, "CASES"] = cases
+            temp_df.loc[code, "DEATHS"] = deaths
             temp_df.loc[code, "LOGS"] = math.log(cases)
         except KeyError as e:
             print(f"Error: {e}")
 
     temp_df.to_csv("world_codes.csv")
 
-
-update_csv()
 
 if len(sys.argv) > 1 and sys.argv[1] == "update":
     update_csv()
@@ -73,7 +80,8 @@ for col in df.columns:
     df[col] = df[col].astype(str)
 
 df["text"] = df["COUNTRY"] + "<br>" + \
-             "Total Cases: " + df["CASES"] + df["NEW CASES"]
+             "Total Cases: " + df["CASES"] + df["NEW CASES"] + "<br>" + \
+             "Total Deaths: " + df["DEATHS"] + df["NEW DEATHS"]
 
 fig = go.Figure(data=go.Choropleth(
     locations=df['CODE'],
