@@ -59,18 +59,25 @@ def update_csv():
                         print("Retrying...")
 
         try:
-            if cases - temp_df.loc[code, "CASES"] == 0:
+            old_cases = temp_df.loc[code, "CASES"]
+            old_deaths = temp_df.loc[code, "DEATHS"]
+            if isinstance(old_cases, str):
+                old_cases = int((temp_df.loc[code, "CASES"]).replace(",", ""))
+            if isinstance(old_deaths, str):
+                old_deaths = int((temp_df.loc[code, "DEATHS"]).replace(",", ""))
+
+            if cases - old_cases == 0:
                 temp_df.loc[code, "NEW CASES"] = " "
             else:
-                temp_df.loc[code, "NEW CASES"] = " (+" + str(cases - temp_df.loc[code, "CASES"]) + ")"
+                temp_df.loc[code, "NEW CASES"] = " (+" + format(cases - old_cases, ",") + ")"
 
-            if deaths - temp_df.loc[code, "DEATHS"] == 0:
+            if deaths - old_deaths == 0:
                 temp_df.loc[code, "NEW DEATHS"] = " "
             else:
-                temp_df.loc[code, "NEW DEATHS"] = " (+" + str(deaths - temp_df.loc[code, "DEATHS"]) + ")"
+                temp_df.loc[code, "NEW DEATHS"] = " (+" + format(deaths - old_deaths, ",") + ")"
 
-            temp_df.loc[code, "CASES"] = cases
-            temp_df.loc[code, "DEATHS"] = deaths
+            temp_df.loc[code, "CASES"] = format(cases, ",")
+            temp_df.loc[code, "DEATHS"] = format(deaths, ",")
             temp_df.loc[code, "LOGS"] = math.log(cases)
         except KeyError as e:
             pass
