@@ -22,6 +22,12 @@ def update_csv():
             continue
         table_cells = table_rows[i].findAll("td")
         country = table_cells[0].next.strip()
+        if country == "":
+            try:
+                country = table_cells[0].findAll("a")[0].next
+            except IndexError:
+                print("Do one Diamond Princess")
+
         country = country.replace("St.", "Saint")
         country = country.replace("N.", "North")
         country = country.replace("S.", "South")
@@ -35,7 +41,7 @@ def update_csv():
         else:
             deaths = 0
 
-        if country == "":
+        if country == "" or country == "Channel Islands":
             continue
         else:
             if country in codes.index:
@@ -67,7 +73,7 @@ def update_csv():
             temp_df.loc[code, "DEATHS"] = deaths
             temp_df.loc[code, "LOGS"] = math.log(cases)
         except KeyError as e:
-            print(f"Error: {e}")
+            pass
 
     temp_df.to_csv("world_codes.csv")
 
