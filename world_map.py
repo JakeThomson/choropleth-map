@@ -41,6 +41,8 @@ def update_csv():
         else:
             deaths = 0
 
+        recoveries = table_cells[5].next
+
         if country == "" or country == "Channel Islands":
             continue
         else:
@@ -50,7 +52,9 @@ def update_csv():
                 print(f"{str(country)} ({cases} cases) is not in country_codes.csv, grabbing ISO code from google")
                 while True:
                     try:
-                        code = pycountry.countries.search_fuzzy(country)
+                        code = pycountry.countries.search_fuzzy(country)[0].alpha_3
+                        codes.loc[country, "CODE"] = code
+                        codes.to_csv("country_codes.csv")
                         break
                     except ValueError:
                         break
