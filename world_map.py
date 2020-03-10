@@ -93,6 +93,10 @@ def update_csv():
             temp_df.loc[code, "CASES"] = format(cases, ",")
             temp_df.loc[code, "DEATHS"] = format(deaths, ",")
             temp_df.loc[code, "RECOVERIES"] = format(recoveries, ",")
+            if not cases == 0:
+                temp_df.loc[code, "MORTALITY RATE"] = str(round(deaths/cases*100, 2)) + "%"
+            else:
+                temp_df.loc[code, "MORTALITY RATE"] = 0
             temp_df.loc[code, "LOGS"] = math.log(cases)
         except KeyError as e:
             pass
@@ -110,7 +114,8 @@ for col in df.columns:
 df["text"] = df["COUNTRY"] + "<br>" + \
              "Total Cases: " + df["CASES"] + df["NEW CASES"] + "<br>" + \
              "Total Deaths: " + df["DEATHS"] + df["NEW DEATHS"] + "<br>" + \
-             "Total Recoveries: " + df["RECOVERIES"] + df["NEW RECOVERIES"]
+             "Total Recoveries: " + df["RECOVERIES"] + df["NEW RECOVERIES"] + "<br>" + \
+             "Mortality Rate: " + df["MORTALITY RATE"]
 
 fig = go.Figure(data=go.Choropleth(
     locations=df['CODE'],
