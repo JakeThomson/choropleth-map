@@ -138,67 +138,48 @@ df["text2"] = df["COUNTRY"] + "<br>" + \
              "Total Recoveries: " + df["RECOVERIES"] + df["NEW RECOVERIES"] + "<br>" + \
              "Mortality Rate: " + df["MORTALITY RATE"]
 
-fig = go.Figure(data=go.Choropleth(
-    locations=df['CODE'],
-    z=df['LOGS'],
-    text=df['text'],
-    colorscale="reds",
-    autocolorscale=False,
-    reversescale=False,
-    marker_line_color='darkgray',
-    marker_line_width=0.5,
-    colorbar_title='Total Cases',
-))
 
-fig2 = go.Figure(data=go.Choropleth(
-    locations=df['CODE'],
-    z=df["ACTIVE LOG"],
-    text=df['text2'],
-    colorscale="greens",
-    autocolorscale=False,
-    reversescale=False,
-    marker_line_color='darkgray',
-    marker_line_width=0.5,
-    colorbar_title='Active Cass (log(x))',
-))
+def create_fig(z, text, color, title):
+    return go.Figure(data=go.Choropleth(
+        locations=df['CODE'],
+        z=df[z],
+        text=df[text],
+        colorscale=color,
+        autocolorscale=False,
+        reversescale=False,
+        marker_line_color='darkgray',
+        marker_line_width=0.5,
+        colorbar_title=title,
+    ))
 
-fig.update_layout(
-    title_text='Total Coronavirus cases',
-    geo=dict(
-        showframe=False,
-        showcoastlines=False,
-        projection_type='equirectangular',
-        showlakes=False
-    ),
-    annotations=[dict(
-        x=0.55,
-        y=0.1,
-        xref='paper',
-        yref='paper',
-        text='',
-        showarrow=False
-    )]
-)
 
-fig2.update_layout(
-    title_text='Active Coronavirus cases',
-    geo=dict(
-        showframe=False,
-        showcoastlines=False,
-        projection_type='equirectangular',
-        showlakes=False
-    ),
-    annotations=[dict(
-        x=0.55,
-        y=0.1,
-        xref='paper',
-        yref='paper',
-        text='',
-        showarrow=False
-    )]
-)
+def update_fig(fig, title):
+    fig.update_layout(
+        title_text=title,
+        geo=dict(
+            showframe=False,
+            showcoastlines=False,
+            projection_type='equirectangular',
+            showlakes=False
+        ),
+        annotations=[dict(
+            x=0.55,
+            y=0.1,
+            xref='paper',
+            yref='paper',
+            text='',
+            showarrow=False
+        )]
+    )
+
+
 if len(sys.argv) > 1 and sys.argv[1].lower() == "update":
     update_csv()
+    fig = create_fig("LOGS", "text", "reds", "Total cases (log(x))")
+    update_fig(fig, "Total COVID-19 cases")
     fig.show()
+
 elif sys.argv[1].lower() == "active":
-    fig2.show()
+    fig = create_fig("ACTIVE LOG", "text2", "greens", "Active cases (log(x))")
+    update_fig(fig, "Active COVID-19 cases")
+    fig.show()
