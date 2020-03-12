@@ -1,4 +1,6 @@
 import math
+from datetime import time
+
 import pycountry
 from plotly import graph_objs as go
 import pandas as pd
@@ -45,6 +47,8 @@ def update_csv():
         else:
             recoveries = 0
 
+        active = cases - deaths - recoveries
+
         if country == "" or country == "Channel Islands":
             continue
         else:
@@ -68,12 +72,15 @@ def update_csv():
             old_cases = temp_df.loc[code, "CASES"]
             old_deaths = temp_df.loc[code, "DEATHS"]
             old_recoveries = temp_df.loc[code, "RECOVERIES"]
+            old_active = temp_df.loc[code, "ACTIVE"]
             if isinstance(old_cases, str):
                 old_cases = int((temp_df.loc[code, "CASES"]).replace(",", ""))
             if isinstance(old_deaths, str):
                 old_deaths = int((temp_df.loc[code, "DEATHS"]).replace(",", ""))
             if isinstance(old_recoveries, str):
                 old_recoveries = int((temp_df.loc[code, "RECOVERIES"]).replace(",", ""))
+            if isinstance(old_active, str):
+                old_active = int((temp_df.loc[code, "ACTIVE"]).replace(",", ""))
 
             if cases - old_cases == 0:
                 temp_df.loc[code, "NEW CASES"] = " "
@@ -90,13 +97,23 @@ def update_csv():
             else:
                 temp_df.loc[code, "NEW RECOVERIES"] = " (+" + format(recoveries - old_recoveries, ",") + ")"
 
+            if active - old_active == 0:
+                temp_df.loc[code, "NEW ACTIVE"] = " "
+            elif active - old_active > 0:
+                temp_df.loc[code, "NEW ACTIVE"] = " (+" + format(active - old_active, ",") + ")"
+            else:
+                temp_df.loc[code, "NEW ACTIVE"] = " (" + format(active - old_active, ",") + ")"
+
             temp_df.loc[code, "CASES"] = format(cases, ",")
             temp_df.loc[code, "DEATHS"] = format(deaths, ",")
             temp_df.loc[code, "RECOVERIES"] = format(recoveries, ",")
+            temp_df.loc[code, "ACTIVE"] = format(active, ",")
+            if not active == 0:
+                temp_df.loc[code, "ACTIVE LOG"] = math.log(active)
             if not cases == 0:
                 temp_df.loc[code, "MORTALITY RATE"] = str(round(deaths/cases*100, 2)) + "%"
             else:
-                temp_df.loc[code, "MORTALITY RATE"] = 0
+                temp_df.loc[code, "MORTALITY RATE"] = "0"
             temp_df.loc[code, "LOGS"] = math.log(cases)
         except KeyError as e:
             pass
@@ -104,15 +121,19 @@ def update_csv():
     temp_df.to_csv("world_data.csv")
 
 
-if len(sys.argv) > 1 and sys.argv[1] == "update":
-    update_csv()
-
 df = pd.read_csv('world_data.csv')
+
 for col in df.columns:
     df[col] = df[col].astype(str)
 
 df["text"] = df["COUNTRY"] + "<br>" + \
              "Total Cases: " + df["CASES"] + df["NEW CASES"] + "<br>" + \
+             "Total Deaths: " + df["DEATHS"] + df["NEW DEATHS"] + "<br>" + \
+             "Total Recoveries: " + df["RECOVERIES"] + df["NEW RECOVERIES"] + "<br>" + \
+             "Mortality Rate: " + df["MORTALITY RATE"]
+
+df["text2"] = df["COUNTRY"] + "<br>" + \
+             "Active Cases: " + df["ACTIVE"] + df["NEW ACTIVE"] + "<br>" + \
              "Total Deaths: " + df["DEATHS"] + df["NEW DEATHS"] + "<br>" + \
              "Total Recoveries: " + df["RECOVERIES"] + df["NEW RECOVERIES"] + "<br>" + \
              "Mortality Rate: " + df["MORTALITY RATE"]
@@ -126,11 +147,23 @@ fig = go.Figure(data=go.Choropleth(
     reversescale=False,
     marker_line_color='darkgray',
     marker_line_width=0.5,
-    colorbar_title='Active Cases',
+    colorbar_title='Total Cases',
+))
+
+fig2 = go.Figure(data=go.Choropleth(
+    locations=df['CODE'],
+    z=df["ACTIVE LOG"],
+    text=df['text2'],
+    colorscale="greens",
+    autocolorscale=False,
+    reversescale=False,
+    marker_line_color='darkgray',
+    marker_line_width=0.5,
+    colorbar_title='Active Cass (log(x))',
 ))
 
 fig.update_layout(
-    title_text='Coronavirus cases',
+    title_text='Total Coronavirus cases',
     geo=dict(
         showframe=False,
         showcoastlines=False,
@@ -147,4 +180,25 @@ fig.update_layout(
     )]
 )
 
-fig.show()
+fig2.update_layout(
+    title_text='Active Coronavirus cases',
+    geo=dict(
+        showframe=False,
+        showcoastlines=False,
+        projection_type='equirectangular',
+        showlakes=False
+    ),
+    annotations=[dict(
+        x=0.55,
+        y=0.1,
+        xref='paper',
+        yref='paper',
+        text='',
+        showarrow=False
+    )]
+)
+if len(sys.argv) > 1 and sys.argv[1].lower() == "update":
+    update_csv()
+    fig.show()
+elif sys.argv[1].lower() == "active":
+    fig2.show()
